@@ -5,46 +5,42 @@ You are a QA automation architect. Generate step definitions for Cucumber featur
 
 ## Input Requirements
 1. Feature file content
-2. Manual test instructions (including API interception details)
+2. Manual test instructions (including API interception details and data validation sources)
 3. Framework configuration
 4. Test data structure
 
 ## Manual Instructions Format
 
-### Simple Step (No Interception)
+### Basic Step Pattern
 ```markdown
-## Step: Navigate to Dashboard
+## Step: [Action Description]
+- Intercept: [Optional] [HTTP Method] [API Endpoint]
+- Store Response As: [Optional] [Response Variable Name]
+- Validate Using: [Optional] [World Object Property]
 ```
 
-### Step with Single API Interception
+### Examples
 ```markdown
+# Simple Navigation
+## Step: Navigate to Dashboard
+
+# With API Interception
 ## Step: Navigate to Client Comparison
 - Intercept: /api/clients/compare
 - Store Response As: clientCompareResponse
-```
 
-### Step with Navigation and API Interception
-```markdown
-## Step: Continue to Review Page
-- Intercept: POST /api/recommended-products
-- Store Response As: recommendedProducts
-```
+# With Data Validation
+## Step: Validate Client Details
+- Validate Using: clientsData
 
-### Step with API Interception
-```markdown
-## Step: Add Product in Review
-- Intercept: POST /api/review-products
-- Store Response As: reviewProducts
-```
-
-### Step with Multiple API Interceptions
-```markdown
-## Step: Load Dashboard Data
+# With Multiple Interceptions and Validation
+## Step: Load and Validate Dashboard
 - Intercept:
   - Endpoint: GET /api/user-profile
     Store As: userProfileData
   - Endpoint: POST /api/dashboard-stats
     Store As: dashboardStats
+- Validate Using: dashboardStats
 ```
 
 ## Framework Context
@@ -64,11 +60,12 @@ interface CustomWorld {
 }
 ```
 
-## Step Definition Patterns
+## Core Implementation Patterns
 
-### 1. Step Implementation with API Interception
+### 1. API Interception Pattern
 ```typescript
-Given('I navigate to the client comparison page', async function(this: CustomWorld) {
+// Reusable API interception setup
+async function setupApiInterceptions(this: CustomWorld) {
   if (this.testData.apiConfig?.interceptions) {
     for (const {endpoint, storageKey} of this.testData.apiConfig.interceptions) {
       await this.page.route(endpoint, async route => {
@@ -79,116 +76,78 @@ Given('I navigate to the client comparison page', async function(this: CustomWor
       });
     }
   }
+}
 
-  // Your step implementation here
-  await this.page.goto('/client-comparison');
+// Usage in step definition
+Given('I navigate to {string}', async function(this: CustomWorld, path: string) {
+  await setupApiInterceptions.call(this);
+  await this.page.goto(path);
   await this.page.waitForLoadState('networkidle');
 });
 ```
 
-### 2. Step with Multiple API Interceptions
+### 2. Data Validation Pattern
 ```typescript
-When('I click continue to proceed to review page', async function(this: CustomWorld) {
-  if (this.testData.apiConfig?.interceptions) {
-    for (const {endpoint, storageKey} of this.testData.apiConfig.interceptions) {
-      await this.page.route(endpoint, async route => {
-        const response = await route.fetch();
-        const json = await response.json();
-        this[storageKey] = json;
-        await route.fulfill({ response });
-      });
-    }
+Then('I validate the data in {string} page', async function(
+  this: CustomWorld, 
+  pageName: string
+) {
+  const page = this.pageObjects[pageName];
+  // Data source is explicitly specified in manual instructions
+  const data = this[this.testData.validationSource];
+  
+  if (!data) {
+    throw new Error(`No data found in world.${this.testData.validationSource} for validation`);
   }
-
-  // Your step implementation here
-  await this.page.click('[data-testid="continue-button"]');
-  await this.page.waitForLoadState('networkidle');
-});
-```
-
-### 3. Data Validation
-```typescript
-Then('the {string} section should match the API data', async function(this: CustomWorld, section: string) {
-  const page = this.pageObjects.currentPage;
-  if (!this.clientCompareResponse) {
-    throw new Error('No API response captured for validation');
-  }
-  await page.validateSection(section, this.clientCompareResponse[section]);
-});
-```
-
-## Example Implementation
-
-### Manual Instructions
-```markdown
-## Step: Navigate to Client Comparison
-- Intercept: /api/clients/compare
-- Store Response As: clientCompareResponse
-
-## Step: Validate Client Data
-```
-
-### Feature File
-```gherkin
-Scenario: Validate client comparison data
-  Given I navigate to the client comparison page
-  Then the "basicInfo" section should match the API data
-  And the "financials" section should match the API data
-```
-
-### Step Definition
-```typescript
-import { Given, Then } from '@cucumber/cucumber';
-import { CustomWorld } from '../support/world';
-import { expect } from '@playwright/test';
-
-Given('I navigate to the client comparison page', async function(this: CustomWorld) {
-  if (this.testData.apiConfig?.interceptions) {
-    for (const {endpoint, storageKey} of this.testData.apiConfig.interceptions) {
-      await this.page.route(endpoint, async route => {
-        const response = await route.fetch();
-        const json = await response.json();
-        this[storageKey] = json;
-        await route.fulfill({ response });
-      });
-    }
-  }
-
-  await this.page.goto('/client-comparison');
-  await this.page.waitForLoadState('networkidle');
+  
+  await page.validateData(data);
 });
 
-Then('the {string} section should match the API data', async function(this: CustomWorld, section: string) {
-  const page = this.pageObjects.currentPage;
-  if (!this.clientCompareResponse) {
-    throw new Error('No API response captured for validation');
+// Example with specific section validation
+Then('I validate the {string} section in {string} page', async function(
+  this: CustomWorld,
+  section: string,
+  pageName: string
+) {
+  const page = this.pageObjects[pageName];
+  const data = this[this.testData.validationSource];
+  
+  if (!data) {
+    throw new Error(`No data found in world.${this.testData.validationSource} for validation`);
   }
-  await page.validateSection(section, this.clientCompareResponse[section]);
+  
+  await page.validateSection(section, data[section]);
 });
 ```
 
 ## Best Practices
 
 1. API Interception
-   - Only intercept when specified in manual instructions
-   - Store responses with specified names
+   - Set up interceptions before any actions
+   - Store responses with descriptive names
    - Maintain original response behavior
-   - Clear error handling for missing responses
+   - Handle errors for missing responses
 
 2. Step Implementation
-   - Keep manual instructions focused on API interception
-   - Handle API setup before any actions
+   - Use reusable interception patterns
    - Wait for network idle after actions
-   - Support multiple API interceptions
+   - Support multiple API endpoints
+   - Keep steps focused and atomic
 
-3. Validation
-   - Check for API response availability by name
-   - Provide clear error messages
-   - Use page object validation methods
-   - Support section-specific validation
+3. Data Validation
+   - Use explicitly specified data sources
+   - Access data directly from world object
+   - Support both full and partial validation
+   - Clear error messages for missing data
 
 4. Error Handling
-   - Clear error messages for missing API data
-   - Proper async/await usage
-   - Timeout handling
-   - Response validation errors 
+   - Check data availability
+   - Use proper async/await
+   - Handle timeouts
+   - Validate data structure
+
+## Real Examples in Codebase
+- Basic step implementation: `src/step-definitions/navigation.steps.ts`
+- API interception: `src/step-definitions/api.steps.ts`
+- Data validation: `src/step-definitions/validation.steps.ts`
+- Error handling: `src/support/error-handling.ts` 
