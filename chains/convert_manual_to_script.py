@@ -6,6 +6,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
 import yaml
+import os
+from .test_generation_manager import TestGenerationManager, TestComponents
 
 from utils.framework_analyzer import FrameworkAnalysis
 
@@ -18,44 +20,26 @@ class TestComponents:
     page_objects_updates: Optional[str] = None
 
 
-def load_manual_test(file_path: str) -> dict:
-    """Load and parse manual test file"""
-    content = Path(file_path).read_text()
-    
-    # Parse markdown sections
-    sections = {}
-    current_section = None
-    current_content = []
-    
-    for line in content.split('\n'):
-        if line.startswith('## '):
-            if current_section:
-                sections[current_section] = '\n'.join(current_content).strip()
-                current_content = []
-            current_section = line[3:].strip()
-        else:
-            current_content.append(line)
-            
-    if current_section:
-        sections[current_section] = '\n'.join(current_content).strip()
-        
-    return sections
+def load_manual_test(path: str) -> dict:
+    """Load manual test from file"""
+    with open(path) as f:
+        return yaml.safe_load(f)
 
 
-def load_har_data(har_path: str) -> Optional[dict]:
-    """Load HAR recording if available"""
-    try:
-        return json.loads(Path(har_path).read_text())
-    except (FileNotFoundError, json.JSONDecodeError):
+def load_har_data(path: Optional[str]) -> Optional[dict]:
+    """Load HAR recording data if available"""
+    if not path or not os.path.exists(path):
         return None
+    with open(path) as f:
+        return json.load(f)
 
 
-def load_dom_snapshot(snapshot_path: str) -> Optional[dict]:
-    """Load DOM snapshot if available"""
-    try:
-        return json.loads(Path(snapshot_path).read_text())
-    except (FileNotFoundError, json.JSONDecodeError):
+def load_dom_snapshot(path: Optional[str]) -> Optional[dict]:
+    """Load DOM snapshot data if available"""
+    if not path or not os.path.exists(path):
         return None
+    with open(path) as f:
+        return json.load(f)
 
 
 def load_prompts() -> Dict[str, str]:
@@ -166,44 +150,41 @@ def update_page_objects_file(
 
 def generate_feature_and_steps(
     manual_test_path: str,
-    framework_analysis: FrameworkAnalysis
+    framework_analysis: dict,
+    project_id: Optional[str] = None,
+    location: str = "us-central1"
 ) -> TestComponents:
-    """Main function to generate test components"""
+    """Main function to generate test components using Codey API"""
+    # Get GCP project ID from environment if not provided
+    if not project_id:
+        project_id = os.getenv('GCP_PROJECT_ID')
+        if not project_id:
+            raise ValueError("GCP_PROJECT_ID must be provided either as an argument or environment variable")
+    
     # Load manual test
     manual_test = load_manual_test(manual_test_path)
-    
-    # Load prompts
-    prompts = load_prompts()
     
     # Load related files if available
     har_path = manual_test.get('Related Files', '').split('HAR Recording: ')[1].split('\n')[0].strip('[]') if 'Related Files' in manual_test else None
     dom_path = manual_test.get('Related Files', '').split('DOM Snapshot: ')[1].split('\n')[0].strip('[]') if 'Related Files' in manual_test else None
     
-    har_data = load_har_data(har_path) if har_path else None
-    dom_snapshot = load_dom_snapshot(dom_path) if dom_path else None
+    har_data = load_har_data(har_path)
+    dom_snapshot = load_dom_snapshot(dom_path)
     
-    # Initialize LLM chain
-    llm = ChatOpenAI(temperature=0.2)
-    base_chain = LLMChain(
-        llm=llm,
-        prompt=PromptTemplate(template="{text}", input_variables=["text"])
-    )
+    # Initialize test generation manager
+    manager = TestGenerationManager(project_id=project_id, location=location)
     
     # Generate components
-    feature_content = generate_feature_file(manual_test, base_chain, prompts)
-    step_definitions = generate_step_definitions(
-        manual_test, framework_analysis, base_chain, prompts, har_data, dom_snapshot
+    feature_content = manager.generate_feature_file(manual_test)
+    step_definitions = manager.generate_step_definitions(
+        manual_test, framework_analysis, har_data, dom_snapshot
     )
-    page_objects = generate_page_objects(
-        manual_test, framework_analysis, base_chain, prompts, dom_snapshot
-    )
-    page_objects_updates = update_page_objects_file(
-        framework_analysis, page_objects, base_chain, prompts
+    page_objects = manager.generate_page_objects(
+        manual_test, framework_analysis, dom_snapshot
     )
     
     return TestComponents(
         feature_file=feature_content,
         step_definitions=step_definitions,
-        page_objects=page_objects,
-        page_objects_updates=page_objects_updates
+        page_objects=page_objects
     )

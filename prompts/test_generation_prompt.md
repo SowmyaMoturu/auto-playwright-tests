@@ -144,8 +144,6 @@ Feature: [Feature Name]
 // world.ts usage pattern
 interface CustomWorld {
   savedResponse: any;  // API response data
-  pageObjects: Record<string, any>;  // Page objects
-  testData: Record<string, any>;     // Test data
 }
 
 // Access pattern in step definitions
