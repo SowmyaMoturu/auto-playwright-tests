@@ -1,0 +1,13 @@
+Analyze the following HAR and DOM data. Extract a list of user flows, interactions, and page transitions.
+
+HAR Data:
+{har_data}
+
+DOM HTML:
+{dom_html}
+
+Output:
+- List each screen or component visited
+- Identify buttons, inputs, links, conditionals
+- Include any dynamic fields that depend on state or previous inputs
+- Structure as a flowchart or sequence of actions

@@ -1,0 +1,84 @@
+{
+    "tool": "cypress",
+    "language": "typescript",
+    "framework": "cucumber",
+    "patterns": {
+        "actions": {
+            "click": "cy.get({locator}).click()",
+            "type": "cy.get({locator}).type({text})",
+            "clear": "cy.get({locator}).clear()",
+            "select": "cy.get({locator}).select({text})",
+            "hover": "cy.get({locator}).trigger('mouseover')",
+            "waitForElement": "cy.get({locator}, { timeout: {timeout} })",
+            "waitForVisible": "cy.get({locator}, { timeout: {timeout} }).should('be.visible')",
+            "intercept": "cy.intercept({method}, {url}).as({alias})",
+            "wait": "cy.wait({alias})"
+        },
+        "assertions": {
+            "equals": "cy.get({locator}).should('have.text', {expected})",
+            "contains": "cy.get({locator}).should('contain', {expected})",
+            "exists": "cy.get({locator}).should('exist')",
+            "notExists": "cy.get({locator}).should('not.exist')",
+            "hasClass": "cy.get({locator}).should('have.class', {expected})"
+        },
+        "selectors": {
+            "preferred": ["data-testid", "data-cy", "id", "class"],
+            "mapping": {
+                "data-testid": "[data-testid='{value}']",
+                "data-cy": "[data-cy='{value}']",
+                "id": "#{value}",
+                "class": ".{value}",
+                "css": "{value}",
+                "contains": ":contains('{value}')"
+            }
+        },
+        "imports": [
+            "import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'",
+            "import { ICustomWorld } from '../support/custom-world'"
+        ],
+        "setup": {
+            "world": {
+                "properties": [
+                    "response: any"
+                ],
+                "initialization": []
+            },
+            "hooks": {
+                "before": [
+                    "cy.viewport(1280, 720)"
+                ],
+                "after": [
+                    "cy.clearCookies()",
+                    "cy.clearLocalStorage()"
+                ]
+            }
+        }
+    },
+    "pageObject": {
+        "template": "export class {name}Page {\n    // Page elements\n    {elements}\n\n    // Page actions\n    {actions}\n\n    // Custom commands\n    {commands}\n}",
+        "elementTemplate": "private {name} = '{value}';",
+        "actionTemplate": "{name}({params}) {\n    {body}\n    return this;\n}",
+        "commandTemplate": "Cypress.Commands.add('{name}', {params} => {\n    {body}\n});"
+    },
+    "customCommands": {
+        "login": {
+            "params": "{ username, password }",
+            "body": [
+                "cy.session([username, password], () => {",
+                "    cy.visit('/login');",
+                "    cy.get('#username').type(username);",
+                "    cy.get('#password').type(password);",
+                "    cy.get('button[type=\"submit\"]').click();",
+                "});"
+            ]
+        },
+        "interceptApi": {
+            "params": "{ method, url, response }",
+            "body": [
+                "cy.intercept(method, url, (req) => {",
+                "    req.reply(response);",
+                "}).as('apiCall');"
+            ]
+        }
+    }
+} 

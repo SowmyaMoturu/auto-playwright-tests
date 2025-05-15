@@ -1,0 +1,15 @@
+langchain
+openai
+faiss-cpu
+python-dotenv
+tiktoken
+playwright
+pytest-playwright
+behave
+black
+typing-extensions
+pydantic>=2.0.0
+jinja2
+pyyaml==6.0.1
+typescript-parser==0.1.0
+dataclasses-json==0.5.7

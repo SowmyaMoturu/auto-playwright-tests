@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Testing
+test-results/
+playwright-report/
+playwright/.cache/
+allure-results/
+allure-report/
+cucumber-report/
+screenshots/
+videos/
+
+# Build output
+dist/
+build/
+*.js.map
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage reports
+coverage/
+
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+*.egg
+.pytest_cache/
+
+# Virtual Environment
+venv/
+env/
+.env/
+.venv/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+temp/ 

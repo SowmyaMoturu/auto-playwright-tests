@@ -1,0 +1,64 @@
+{
+    "tool": "selenium",
+    "language": "typescript",
+    "framework": "cucumber",
+    "patterns": {
+        "actions": {
+            "click": "await driver.findElement(By.{locator}({value})).click()",
+            "type": "await driver.findElement(By.{locator}({value})).sendKeys({text})",
+            "clear": "await driver.findElement(By.{locator}({value})).clear()",
+            "select": "await new Select(driver.findElement(By.{locator}({value}))).selectByVisibleText({text})",
+            "hover": "await new Actions(driver).moveToElement(driver.findElement(By.{locator}({value}))).perform()",
+            "waitForElement": "await driver.wait(until.elementLocated(By.{locator}({value})), {timeout})",
+            "waitForVisible": "await driver.wait(until.elementIsVisible(driver.findElement(By.{locator}({value}))), {timeout})"
+        },
+        "assertions": {
+            "equals": "expect(await driver.findElement(By.{locator}({value})).getText()).toBe({expected})",
+            "contains": "expect(await driver.findElement(By.{locator}({value})).getText()).toContain({expected})",
+            "exists": "expect(await driver.findElements(By.{locator}({value})).length).toBeGreaterThan(0)",
+            "notExists": "expect(await driver.findElements(By.{locator}({value})).length).toBe(0)",
+            "hasClass": "expect(await driver.findElement(By.{locator}({value})).getAttribute('class')).toContain({expected})"
+        },
+        "selectors": {
+            "preferred": ["data-testid", "id", "name", "css"],
+            "mapping": {
+                "data-testid": "css",
+                "id": "id",
+                "name": "name",
+                "css": "css",
+                "xpath": "xpath",
+                "linkText": "linkText",
+                "partialLinkText": "partialLinkText"
+            }
+        },
+        "imports": [
+            "import { Builder, By, until, WebDriver } from 'selenium-webdriver'",
+            "import { Actions, Select } from 'selenium-webdriver'",
+            "import { expect } from 'chai'"
+        ],
+        "setup": {
+            "world": {
+                "properties": [
+                    "driver: WebDriver"
+                ],
+                "initialization": [
+                    "this.driver = await new Builder().forBrowser('chrome').build()"
+                ]
+            },
+            "hooks": {
+                "before": [
+                    "await this.driver.manage().window().maximize()",
+                    "await this.driver.manage().setTimeouts({ implicit: 5000 })"
+                ],
+                "after": [
+                    "await this.driver.quit()"
+                ]
+            }
+        }
+    },
+    "pageObject": {
+        "template": "export class {name}Page {\n    private driver: WebDriver;\n\n    constructor(driver: WebDriver) {\n        this.driver = driver;\n    }\n\n    // Page elements\n    {elements}\n\n    // Page actions\n    {actions}\n}",
+        "elementTemplate": "private {name} = By.{locator}({value});",
+        "actionTemplate": "async {name}({params}) {\n    {body}\n}"
+    }
+} 

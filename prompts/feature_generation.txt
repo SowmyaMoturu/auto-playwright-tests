@@ -1,0 +1,23 @@
+You are a QA automation architect. Convert the following manual test case into a clean, taggable Cucumber-style `.feature` file.
+
+Manual Test Case:
+{manual_test_case}
+
+DOM Snapshots from Multiple Pages:
+{dom_snapshots}
+
+HAR Recording:
+{har_data}
+
+Output:
+- Use DOM snapshots to detect UI components, forms, buttons, conditionally rendered sections
+- Use HAR to infer API intercepts and response-driven validations
+- Extract page flows, user actions, and API interactions
+- Sequence the steps across pages based on the order of DOM files
+- For each page, infer user actions like clicking, typing, submitting, etc.
+- Write a realistic, high-quality Cucumber `.feature` file  
+- Use Given/When/Then for each logical step
+- If UI depends on API response, include intercept/validation step
+- Add meaningful tags (@form, @api, @conditional, etc.)
+- Use `Feature:` and `Scenario:` blocks
+- Keep the language clear and testable
